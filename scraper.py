@@ -1,5 +1,3 @@
-import csv
-import os
 import random
 import time
 from selenium import webdriver
@@ -20,18 +18,21 @@ def setup_browser(country):
     """Initializes the Chrome driver and opens Google."""
     user_agent = random.choice(USER_AGENTS)
     
-    options = webdriver.ChromeOptions()
-    options.add_argument(f"user-agent={user_agent}")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option("useAutomationExtension", False)
-
-    driver = webdriver.Chrome(options=options)
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument(f"user-agent={user_agent}")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option("useAutomationExtension", False)
+    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    
+    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
     driver.get(f"https://{country}")
-
+    
     time.sleep(random.uniform(2, 4))
 
     # Accept Cookies if present
@@ -48,18 +49,16 @@ def setup_browser(country):
 
     return driver
 
-# Function to scrape search results and save them to CSV
+# Function to scrape search results and log to console
 def scrape_google_search(search_terms_string, country, num_results):
-    """Searches multiple terms in one browser session, takes screenshots, and saves results."""
+    """Searches multiple terms in one browser session, logs results to console."""
     search_terms = [term.strip() for term in search_terms_string.split(",") if term.strip()]
     driver = setup_browser(country)
 
     try:
-        if not os.path.exists("screenshots"):
-            os.makedirs("screenshots")
-        if not os.path.exists("csv_results"):
-            os.makedirs("csv_results")
-
+        print(f"Browser opened for country: {country}")
+        print(f"Searching for: {search_terms_string}")
+        
         for search_term in search_terms:
             print(f"Searching for: {search_term}")
 
@@ -77,10 +76,8 @@ def scrape_google_search(search_terms_string, country, num_results):
             search_box.send_keys(Keys.RETURN)
             time.sleep(random.uniform(3, 6))
 
-            # Save screenshot
-            screenshot_path = f"screenshots/{search_term.replace(' ', '_')}.png"
-            driver.save_screenshot(screenshot_path)
-            print(f"Screenshot saved at: {screenshot_path}")
+            # Log screenshot equivalent (just logging here for now)
+            print(f"Would save screenshot for: {search_term}")
 
             # Extract search results (title & link)
             search_results = []
@@ -91,17 +88,9 @@ def scrape_google_search(search_terms_string, country, num_results):
                     title = result.find_element(By.TAG_NAME, "h3").text
                     link = result.find_element(By.TAG_NAME, "a").get_attribute("href")
                     search_results.append([title, link])
+                    print(f"Found result: {title} - {link}")
                 except Exception as e:
                     print(f"Skipping result due to error: {e}")
-
-            # Save results to CSV
-            csv_filename = f"csv_results/{search_term.replace(' ', '_')}.csv"
-            with open(csv_filename, "w", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                writer.writerow(["Title", "Link"])
-                writer.writerows(search_results)
-
-            print(f"Results saved in: {csv_filename}")
 
         return {"status": "success", "message": "All searches completed."}
 
