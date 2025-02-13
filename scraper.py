@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
 
 # List of random user-agents to avoid detection
 USER_AGENTS = [
@@ -32,8 +33,11 @@ def setup_browser(country):
     chrome_options.add_experimental_option("useAutomationExtension", False)
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
+
+    chrome_driver_path = os.environ.get("CHROMEDRIVER_PATH")
+    service = Service(chrome_driver_path)
     
-    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get(f"https://{country}")
     
     time.sleep(random.uniform(2, 4))
