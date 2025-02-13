@@ -22,6 +22,7 @@ def setup_browser(country):
     user_agent = random.choice(USER_AGENTS)
     
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
     chrome_options.add_argument(f"user-agent={user_agent}")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
@@ -32,7 +33,7 @@ def setup_browser(country):
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    driver = webdriver.Chrome(options=chrome_options)
+    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
     driver.get(f"https://{country}")
     
     time.sleep(random.uniform(2, 4))
