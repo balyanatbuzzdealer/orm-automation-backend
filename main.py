@@ -13,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-@app.post("/")
+@app.post("/scrape")
 async def scrape(
     country: str = Form(...),
     search_terms: str = Form(...),
