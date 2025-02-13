@@ -22,6 +22,7 @@ async def scrape(
     num_results: int = Form(...)
 ):
     """Calls scraper only once, keeping a single browser session open."""
+    print("You have called the scraper")
     results = scraper.scrape_google_search(search_terms, country, num_results)
     
     # Prepare response with file paths (can be changed to URLs if hosted)
