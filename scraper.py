@@ -1,5 +1,8 @@
+import os
+import csv
 import random
 import time
+import uuid
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -26,11 +29,10 @@ def setup_browser(country):
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option("useAutomationExtension", False)
-    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
+    driver = webdriver.Chrome(options=chrome_options)
     driver.get(f"https://{country}")
     
     time.sleep(random.uniform(2, 4))
@@ -42,23 +44,47 @@ def setup_browser(country):
         )
         accept_button = driver.find_element(By.XPATH, "//div[contains(text(), 'Accept all')]/ancestor::button")
         accept_button.click()
-        print("Cookie popup accepted.")
         time.sleep(random.uniform(3, 5))
     except Exception:
         print("No cookie popup found or already accepted.")
 
     return driver
 
-# Function to scrape search results and log to console
+# Function to save results to CSV
+def save_to_csv(search_term, search_results):
+    """Saves search results to a CSV file."""
+    filename = f"{search_term}_{uuid.uuid4()}.csv"
+    file_path = os.path.join("output", filename)
+    
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
+    with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Title", "Link"])
+        for result in search_results:
+            writer.writerow([result["title"], result["link"]])
+    
+    return file_path
+
+# Function to capture a screenshot
+def capture_screenshot(driver, search_term):
+    """Captures a screenshot for a given search term."""
+    screenshot_filename = f"{search_term}_{uuid.uuid4()}.png"
+    screenshot_path = os.path.join("output", screenshot_filename)
+    
+    driver.save_screenshot(screenshot_path)
+    
+    return screenshot_path
+
+# Function to scrape search results and save to CSV, capture screenshots
 def scrape_google_search(search_terms_string, country, num_results):
-    """Searches multiple terms in one browser session, logs results to console."""
+    """Searches multiple terms in one browser session, saves results and captures screenshots."""
     search_terms = [term.strip() for term in search_terms_string.split(",") if term.strip()]
     driver = setup_browser(country)
+    
+    results = {}
 
     try:
-        print(f"Browser opened for country: {country}")
-        print(f"Searching for: {search_terms_string}")
-        
         for search_term in search_terms:
             print(f"Searching for: {search_term}")
 
@@ -76,23 +102,29 @@ def scrape_google_search(search_terms_string, country, num_results):
             search_box.send_keys(Keys.RETURN)
             time.sleep(random.uniform(3, 6))
 
-            # Log screenshot equivalent (just logging here for now)
-            print(f"Would save screenshot for: {search_term}")
-
             # Extract search results (title & link)
             search_results = []
-            results = driver.find_elements(By.XPATH, "//div[@class='tF2Cxc']")
+            result_elements = driver.find_elements(By.XPATH, "//div[@class='tF2Cxc']")
             
-            for result in results[:num_results]:  # Limit to num_results
+            for result in result_elements[:num_results]:  # Limit to num_results
                 try:
                     title = result.find_element(By.TAG_NAME, "h3").text
                     link = result.find_element(By.TAG_NAME, "a").get_attribute("href")
-                    search_results.append([title, link])
-                    print(f"Found result: {title} - {link}")
+                    search_results.append({"title": title, "link": link})
                 except Exception as e:
                     print(f"Skipping result due to error: {e}")
+            
+            # Save results to CSV and capture screenshot
+            csv_file_path = save_to_csv(search_term, search_results)
+            screenshot_file_path = capture_screenshot(driver, search_term)
+            
+            # Add file paths to results
+            results[search_term] = {
+                "csv": csv_file_path,
+                "screenshot": screenshot_file_path
+            }
 
-        return {"status": "success", "message": "All searches completed."}
+        return {"status": "success", "results": results}
 
     except Exception as e:
         print(f"Error: {e}")
