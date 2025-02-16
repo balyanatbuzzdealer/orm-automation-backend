@@ -9,7 +9,13 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import firebase_admin
-from firebase_admin import storage
+from firebase_admin import credentials, storage
+
+# Initialize Firebase Admin SDK
+cred = credentials.Certificate("path/to/your/serviceAccountKey.json")  # Replace with the path to your service account file
+firebase_admin.initialize_app(cred, {
+    'storageBucket': 'your-app-id.appspot.com'  # Replace with your Firebase storage bucket name
+})
 
 # List of random user-agents to avoid detection
 USER_AGENTS = [

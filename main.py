@@ -1,18 +1,6 @@
 from fastapi import FastAPI, Form
-import os
 from fastapi.middleware.cors import CORSMiddleware
 import scraper  # Import scraper.py
-import firebase_admin
-from firebase_admin import credentials, firestore, storage
-
-# Initialize Firebase Admin SDK
-cred = credentials.Certificate(os.environ.get("FIRESTORE"))
-firebase_admin.initialize_app(cred, {
-    'storageBucket': 'orm-automation-app.appspot.com'  # Replace with your Firebase Storage bucket
-})
-
-# Initialize Firestore (if needed)
-db = firestore.client()
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -37,4 +25,3 @@ async def scrape(
     results = scraper.scrape_google_search(search_terms, country, num_results)
     
     return {"status": "success", "files": results.get("results", {})}
-
