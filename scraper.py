@@ -12,9 +12,9 @@ import firebase_admin
 from firebase_admin import credentials, storage
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate("path/to/your/serviceAccountKey.json")  # Replace with the path to your service account file
+cred = credentials.Certificate(os.environ.get("FIRESTORE"))  # Replace with the path to your service account file
 firebase_admin.initialize_app(cred, {
-    'storageBucket': 'your-app-id.appspot.com'  # Replace with your Firebase storage bucket name
+    'storageBucket': 'orm-automation-app.appspot.com'  # Replace with your Firebase storage bucket name
 })
 
 # List of random user-agents to avoid detection
