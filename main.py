@@ -1,15 +1,26 @@
 from fastapi import FastAPI, Form
+import os
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 import scraper  # Import scraper.py
+import firebase_admin
+from firebase_admin import credentials, firestore, storage
 
+# Initialize Firebase Admin SDK
+cred = credentials.Certificate(os.environ.get("FIRESTORE"))
+firebase_admin.initialize_app(cred, {
+    'storageBucket': 'orm-automation-app.appspot.com'  # Replace with your Firebase Storage bucket
+})
+
+# Initialize Firestore (if needed)
+db = firestore.client()
+
+# Initialize FastAPI app
 app = FastAPI()
 
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    # allow_origins=["https://orm-automation-frontend.vercel.app", "http://localhost:3000/"],
-    allow_origins=["*"],
+    allow_origins=["*"],  # Update this with specific domains for security
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
@@ -25,8 +36,5 @@ async def scrape(
     print("You have called the scraper")
     results = scraper.scrape_google_search(search_terms, country, num_results)
     
-    # Prepare response with file paths (can be changed to URLs if hosted)
-    file_paths = results.get("results", {})
-    
-    # Send the file paths (for demonstration)
-    return {"status": "success", "files": file_paths}
+    return {"status": "success", "files": results.get("results", {})}
+

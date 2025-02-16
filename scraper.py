@@ -8,7 +8,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
+import firebase_admin
+from firebase_admin import storage
 
 # List of random user-agents to avoid detection
 USER_AGENTS = [
@@ -16,6 +17,9 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
 ]
+
+# Firebase Storage bucket
+bucket = storage.bucket()
 
 # Function to initialize and configure the browser
 def setup_browser(country):
@@ -33,11 +37,8 @@ def setup_browser(country):
     chrome_options.add_experimental_option("useAutomationExtension", False)
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
-
-    chrome_driver_path = os.environ.get("CHROMEDRIVER_PATH")
-    service = Service(chrome_driver_path)
     
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
     driver.get(f"https://{country}")
     
     time.sleep(random.uniform(2, 4))
@@ -81,9 +82,17 @@ def capture_screenshot(driver, search_term):
     
     return screenshot_path
 
-# Function to scrape search results and save to CSV, capture screenshots
+# Function to upload a file to Firebase Storage
+def upload_to_firebase(file_path):
+    """Uploads a file to Firebase Storage and returns its public URL."""
+    blob = bucket.blob(os.path.basename(file_path))
+    blob.upload_from_filename(file_path)
+    blob.make_public()
+    return blob.public_url
+
+# Function to scrape search results, save to CSV, capture screenshots, and upload to Firebase
 def scrape_google_search(search_terms_string, country, num_results):
-    """Searches multiple terms in one browser session, saves results and captures screenshots."""
+    """Searches multiple terms in one browser session, saves results, captures screenshots, and uploads to Firebase."""
     search_terms = [term.strip() for term in search_terms_string.split(",") if term.strip()]
     driver = setup_browser(country)
     
@@ -123,10 +132,14 @@ def scrape_google_search(search_terms_string, country, num_results):
             csv_file_path = save_to_csv(search_term, search_results)
             screenshot_file_path = capture_screenshot(driver, search_term)
             
-            # Add file paths to results
+            # Upload files to Firebase Storage
+            csv_url = upload_to_firebase(csv_file_path)
+            screenshot_url = upload_to_firebase(screenshot_file_path)
+
+            # Add file URLs to results
             results[search_term] = {
-                "csv": csv_file_path,
-                "screenshot": screenshot_file_path
+                "csv": csv_url,
+                "screenshot": screenshot_url
             }
 
         return {"status": "success", "results": results}
