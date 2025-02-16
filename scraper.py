@@ -11,11 +11,24 @@ from selenium.webdriver.support import expected_conditions as EC
 import firebase_admin
 from firebase_admin import credentials, storage
 
-# Initialize Firebase Admin SDK
-cred = credentials.Certificate(os.environ.get("FIRESTORE"))  # Replace with the path to your service account file
+cred = credentials.Certificate({
+  "type": "service_account",
+  "project_id": "orm-automation-app",
+  "private_key_id": "c5ee1c103cf46319b7b01ed1e75db2a73ca38402",
+  "private_key": os.environ.get("FIRESTORE_PRIVATE_KEY").replace("\\n", "\n"),  # Corrected: get private key from env variable
+  "client_email": "firebase-adminsdk-fbsvc@orm-automation-app.iam.gserviceaccount.com",
+  "client_id": "117641343782622588074",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40orm-automation-app.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+})
+
 firebase_admin.initialize_app(cred, {
     'storageBucket': 'orm-automation-app.appspot.com'  # Replace with your Firebase storage bucket name
 })
+
 
 # List of random user-agents to avoid detection
 USER_AGENTS = [
