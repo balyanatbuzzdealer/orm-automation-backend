@@ -15,7 +15,7 @@ cred = credentials.Certificate({
   "type": "service_account",
   "project_id": "orm-automation-app",
   "private_key_id": "c5ee1c103cf46319b7b01ed1e75db2a73ca38402",
-  "private_key": os.environ.get("FIRESTORE_PRIVATE_KEY").replace("\\n", "\n"),  # Corrected: get private key from env variable
+  "private_key": os.environ.get("FIRESTORE").replace("\\n", "\n"),  # Corrected: get private key from env variable
   "client_email": "firebase-adminsdk-fbsvc@orm-automation-app.iam.gserviceaccount.com",
   "client_id": "117641343782622588074",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
