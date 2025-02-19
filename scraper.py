@@ -11,23 +11,23 @@ from selenium.webdriver.support import expected_conditions as EC
 import firebase_admin
 from firebase_admin import credentials, storage
 
-cred = credentials.Certificate({
-  "type": "service_account",
-  "project_id": "orm-automation-app",
-  "private_key_id": "c5ee1c103cf46319b7b01ed1e75db2a73ca38402",
-  "private_key": f"\"{os.environ.get('FIRESTORE')}\"",
-  "client_email": "firebase-adminsdk-fbsvc@orm-automation-app.iam.gserviceaccount.com",
-  "client_id": "117641343782622588074",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40orm-automation-app.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-})
+# cred = credentials.Certificate({
+#   "type": "service_account",
+#   "project_id": "orm-automation-app",
+#   "private_key_id": "c5ee1c103cf46319b7b01ed1e75db2a73ca38402",
+#   "private_key": f"\"{os.environ.get('FIRESTORE')}\"",
+#   "client_email": "firebase-adminsdk-fbsvc@orm-automation-app.iam.gserviceaccount.com",
+#   "client_id": "117641343782622588074",
+#   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+#   "token_uri": "https://oauth2.googleapis.com/token",
+#   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+#   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40orm-automation-app.iam.gserviceaccount.com",
+#   "universe_domain": "googleapis.com"
+# })
 
-firebase_admin.initialize_app(cred, {
-    'storageBucket': 'orm-automation-app.appspot.com'  # Replace with your Firebase storage bucket name
-})
+# firebase_admin.initialize_app(cred, {
+#     'storageBucket': 'orm-automation-app.appspot.com'  # Replace with your Firebase storage bucket name
+# })
 
 
 # List of random user-agents to avoid detection
@@ -38,7 +38,9 @@ USER_AGENTS = [
 ]
 
 # Firebase Storage bucket
-bucket = storage.bucket()
+# bucket = storage.bucket()
+
+print(os.environ.get('FIRESTORE'))
 
 # Function to initialize and configure the browser
 def setup_browser(country):
