@@ -1,9 +1,12 @@
 import os
 import csv
 import random
+import base64
+import requests
+import json
 import time
 import uuid
-from supabase import create_client, Client
+from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -11,30 +14,13 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+owner = 'balyanatbuzzdealer'  # GitHub username or organization name
+repo = os.getenv('GITHUB_REPO')  # Repository name
+token = os.getenv('GITHUB_TOKEN') # Your GitHub token
+
+
+# Specify the path to your ChromeDriver
 chromedriver_path = "/Users/davidbalian/Downloads/chromedriver-mac-arm64/chromedriver"  # Update if needed
-
-url: str = "https://zqjmxfuneoaaqppnjzfd.supabase.co"
-key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpxam14ZnVuZW9hYXFwcG5qemZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5NTcxMTcsImV4cCI6MjA1NTUzMzExN30.PFNYW-pwvMYB0JsR7h-HyV06Acadm1lSKvL7PMIuHLg"
-
-try:
-    supabase: Client = create_client(url, key)
-    print("Successfully connected to Supabase!")
-
-    # Optionally, you can make a simple test request to further confirm:
-    try:
-        response = supabase.auth.get_user()  # Or any other simple Supabase call
-        if response.error:
-            print(f"Supabase test request failed: {response.error}")
-        else:
-            print("Supabase test request successful.")
-    except Exception as e:
-        print(f"Error during Supabase test request: {e}")
-
-except Exception as e:
-    print(f"Failed to connect to Supabase: {e}")
-
-csv_bucket_name = "CSVs"
-screenshot_bucket_name = "Screenshots"
 
 # List of random user-agents to avoid detection
 USER_AGENTS = [
@@ -78,49 +64,87 @@ def setup_browser(country):
 
     return driver
 
-# Function to save results to CSV in Supabase Storage
-def save_to_csv_supabase(search_term, search_results):
-    """Saves search results to a CSV file in Supabase Storage."""
+def upload_to_github(file_content, filename):
+    """Uploads a file to GitHub."""
+    url = f"https://api.github.com/repos/{owner}/{repo}/contents/{filename}"
+    encoded_content = base64.b64encode(file_content.encode('utf-8')).decode('utf-8')
+    message = f"Upload {filename} via scraper"
+
+    # Check if the file exists to get the SHA for update, or create a new file
+    response = requests.get(url, headers={'Authorization': f'Bearer {token}'})
+    sha = response.json().get('sha') if response.status_code == 200 else None
+
+    body = {
+        "message": message,
+        "content": encoded_content,
+        "branch": "main"
+    }
+    if sha:
+        body["sha"] = sha
+
+    headers = {'Authorization': f'Bearer {token}'}
+    response = requests.put(url, headers=headers, data=json.dumps(body))
+
+    if response.status_code in [200, 201]:
+        print(f"File uploaded successfully: {filename}")
+    else:
+        print(f"Error uploading file: {filename} - {response.status_code}, {response.text}")
+
+def generate_jsdelivr_url(filename):
+    """Generates a jsDelivr URL for the file on GitHub."""
+    return f"https://cdn.jsdelivr.net/gh/{owner}/{repo}@main/{filename}"
+
+def save_csv_to_github(search_term, search_results):
+    """Saves search results to a CSV file, uploads it to GitHub, and returns the jsDelivr URL."""
     filename = f"{search_term}_{uuid.uuid4()}.csv"
-    file_path_local = os.path.join("output", filename) # Local temporary file
+    file_path_local = os.path.join("output", filename)  # Local temporary file
     
     os.makedirs(os.path.dirname(file_path_local), exist_ok=True)
     
-    with open(file_path_local, mode='w', newline='', encoding='utf-8') as file:  # Save locally first
+    # Save search results to CSV locally
+    with open(file_path_local, mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow(["Title", "Link"])
         for result in search_results:
             writer.writerow([result["title"], result["link"]])
-    
+
     try:
-        with open(file_path_local, 'rb') as file:  # Open in binary mode for Supabase upload
-            supabase.storage().from_(csv_bucket_name).upload(file=file, path=filename, file_options={})
-        print(f"Results for '{search_term}' uploaded to Supabase Storage: {filename}")
-        os.remove(file_path_local) # Delete local file after upload
-        return filename # Return the filename for potential later use (e.g., linking in database)
+        with open(file_path_local, 'r') as file:
+            file_content = file.read()
+        
+        # Upload the CSV to GitHub
+        upload_to_github(file_content, f"search_results/{filename}")
+        os.remove(file_path_local)  # Delete local file after upload
+        
+        # Return jsDelivr URL
+        return generate_jsdelivr_url(f"search_results/{filename}")
+
     except Exception as e:
-        print(f"Error uploading to Supabase Storage: {e}")
+        print(f"Error uploading to GitHub: {e}")
         return None
 
-# Function to capture and save screenshot to Supabase Storage
-def capture_screenshot_supabase(driver, search_term):
-    """Captures a screenshot and saves it to Supabase Storage."""
+def capture_screenshot_github(driver, search_term):
+    """Captures a screenshot, uploads it to GitHub, and returns the jsDelivr URL."""
     screenshot_filename = f"{search_term}_{uuid.uuid4()}.png"
     screenshot_path_local = os.path.join("output", screenshot_filename)
 
     try:
-        driver.save_screenshot(screenshot_path_local) # Save locally first
-        with open(screenshot_path_local, 'rb') as file:  # Open in binary mode for Supabase upload
-            supabase.storage().from_(screenshot_bucket_name).upload(file=file, path=screenshot_filename, file_options={"content-type": "image/png"})
-        print(f"Screenshot for '{search_term}' uploaded to Supabase Storage: {screenshot_filename}")
-        os.remove(screenshot_path_local) # Delete local file after upload
-        return screenshot_filename
+        driver.save_screenshot(screenshot_path_local)  # Save locally first
+        
+        with open(screenshot_path_local, 'rb') as file:
+            screenshot_content = base64.b64encode(file.read()).decode('utf-8')
+        
+        # Upload the screenshot to GitHub
+        upload_to_github(screenshot_content, f"screenshots/{screenshot_filename}")
+        os.remove(screenshot_path_local)  # Delete local file after upload
+        
+        # Return jsDelivr URL
+        return generate_jsdelivr_url(f"screenshots/{screenshot_filename}")
+
     except Exception as e:
         print(f"Error capturing or uploading screenshot: {e}")
         return None
 
-
-# Function to scrape and save to CSV
 def scrape_google_search(search_terms_string, country, num_results):
     search_terms = [term.strip() for term in search_terms_string.split(",") if term.strip()]
     driver = setup_browser(country)
@@ -139,7 +163,7 @@ def scrape_google_search(search_terms_string, country, num_results):
             time.sleep(random.uniform(3, 6))
 
             search_results = []
-            result_elements = driver.find_elements(By.XPATH, "//div[@class='tF2Cxc']") # Example XPath, adjust as needed
+            result_elements = driver.find_elements(By.XPATH, "//div[@class='tF2Cxc']")  # Example XPath, adjust as needed
 
             for result in result_elements[:num_results]:  # Limit to num_results
                 try:
@@ -149,21 +173,24 @@ def scrape_google_search(search_terms_string, country, num_results):
                 except Exception as e:
                     print(f"Skipping result due to error: {e}")
 
-            # Save to CSV
-            csv_path = save_to_csv_supabase(search_term, search_results)
-            print(f"Results for '{search_term}' saved to: {csv_path}")
+            # Save to CSV and get jsDelivr URL
+            csv_url = save_csv_to_github(search_term, search_results)
+            print(f"CSV for '{search_term}' saved to: {csv_url}")
 
-            # Capture screenshot
-            screenshot_path = capture_screenshot_supabase(driver, search_term)  # Call the function
-            if screenshot_path:
-                print(f"Screenshot for '{search_term}' saved to: {screenshot_path}")
+            # Capture screenshot and get jsDelivr URL
+            screenshot_url = capture_screenshot_github(driver, search_term)
+            if screenshot_url:
+                print(f"Screenshot for '{search_term}' saved to: {screenshot_url}")
             else:
                 print(f"Screenshot capture failed for '{search_term}'")
 
+            # Store the URLs for the current search term
+            results[search_term] = {
+                "csv": csv_url,
+                "screenshot": screenshot_url
+            }
 
-            results[search_term] = search_results
-
-        return {"status": "success", "results": results}
+        return {"status": "success", "files": results}
 
     except Exception as e:
         print(f"Error: {e}")
