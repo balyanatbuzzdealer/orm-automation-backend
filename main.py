@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
-import scraper  # Import scraper.py
+import scraper  # Import the updated scraper.py
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -24,17 +24,11 @@ async def scrape(
     print("You have called the scraper")
     results = scraper.scrape_google_search(search_terms, country, num_results)
 
-    # Return the GitHub/jsDelivr links for each search term
-    files = results.get("files", {})
-    links = {}
+    if "status" in results and results["status"] == "error":
+        return results  # Return the error message if any
 
-    for search_term, file_data in files.items():
-        csv_link = file_data.get("csv")
-        screenshot_link = file_data.get("screenshot")
-        
-        links[search_term] = {
-            "csv_link": csv_link,
-            "screenshot_link": screenshot_link
-        }
-
-    return {"status": "success", "files": links}
+    # Properly handle the list of results
+    return {
+        "status": "success",
+        "results": results.get("results", [])
+    }
