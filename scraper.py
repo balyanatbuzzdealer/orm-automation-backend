@@ -20,7 +20,7 @@ def setup_browser(country):
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    chromedriver_path = "/Users/davidbalian/Downloads/chromedriver-mac-arm64/chromedriver"
+    chromedriver_path = "./chromedriver-mac-arm64/chromedriver"
 
     service = Service(executable_path=chromedriver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
